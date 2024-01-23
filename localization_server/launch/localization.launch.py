@@ -15,7 +15,9 @@ def generate_launch_description():
     )
 
     # Use LaunchConfiguration to dynamically get the map file
-    map_file = LaunchConfiguration('map_file')
+    map_file = LaunchConfiguration('map_file')    
+
+    nav2_yaml = os.path.join(get_package_share_directory('localization_server'), 'config', 'amcl_config.yaml')
 
     return LaunchDescription([
         map_file_arg,
@@ -25,14 +27,24 @@ def generate_launch_description():
             name='map_server',
             output='screen',
             parameters=[{'use_sim_time': True}, 
-                        {'yaml_filename': [os.path.join(get_package_share_directory('map_server'), 'config'), '/', map_file]}]),
+                        {'yaml_filename': [os.path.join(get_package_share_directory('map_server'), 'config'), '/', map_file]}]
+        ),
+            
+        Node(
+            package='nav2_amcl',
+            executable='amcl',
+            name='amcl',
+            output='screen',
+            parameters=[nav2_yaml]
+        ),
 
         Node(
             package='nav2_lifecycle_manager',
             executable='lifecycle_manager',
-            name='lifecycle_manager_mapper',
+            name='lifecycle_manager_localization',
             output='screen',
             parameters=[{'use_sim_time': True},
                         {'autostart': True},
-                        {'node_names': ['map_server']}])
+                        {'node_names': ['map_server', 'amcl']}]
+        )
     ])
