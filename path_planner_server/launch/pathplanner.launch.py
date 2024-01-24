@@ -9,6 +9,7 @@ def generate_launch_description():
     bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt.yaml')
     planner_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'planner_server.yaml')
     recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery.yaml')
+    rviz_config_file = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'pathplanning.rviz')
 
     return LaunchDescription([     
         Node(
@@ -16,7 +17,8 @@ def generate_launch_description():
             executable='controller_server',
             name='controller_server',
             output='screen',
-            parameters=[controller_yaml]),
+            parameters=[controller_yaml],
+            remappings=[('/cmd_vel', '/robot/cmd_vel')]),
 
         Node(
             package='nav2_planner',
@@ -48,5 +50,12 @@ def generate_launch_description():
                         {'node_names': ['planner_server',
                                         'controller_server',
                                         'recoveries_server',
-                                        'bt_navigator']}])
+                                        'bt_navigator']}]),
+
+        Node(
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            output='screen',
+            arguments=['-d', rviz_config_file])
     ])
