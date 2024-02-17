@@ -1,0 +1,15 @@
+costmap_filter_info_server:
+  ros__parameters:
+    use_sim_time: true
+    filter_info_topic: "/costmap_filter_info"
+    type: 0
+    mask_topic: "/keepout_filter_mask"
+    base: 0.0
+    multiplier: 1.0
+
+filter_mask_server:
+  ros__parameters:
+    use_sim_time: true
+    frame_id: "map"
+    topic_name: "/keepout_filter_mask"
+    yaml_filename: "/home/user/ros2_ws/src/warehouse_project/map_server/config/warehouse_map_real.yaml"

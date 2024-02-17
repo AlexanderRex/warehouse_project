@@ -21,6 +21,8 @@ def generate_launch_description():
     amcl_real = get_file_path("localization_server", "config", "amcl_config_real.yaml")
     map_sim = get_file_path("map_server", "config", "warehouse_map_sim.yaml")
     map_real = get_file_path("map_server", "config", "warehouse_map_real.yaml")
+    filters_yaml_sim = get_file_path("localization_server", "config", "filters_sim.yaml")
+    filters_yaml_real = get_file_path("localization_server", "config", "filters_real.yaml")
 
     # declare nodes
     map_sim_node = Node(package="nav2_map_server", executable="map_server", name="map_server", output="screen",
@@ -35,16 +37,34 @@ def generate_launch_description():
     amcl_real_node = Node(package="nav2_amcl", executable="amcl", name="amcl", output="screen",
                         parameters=[amcl_real], condition=UnlessCondition(use_sim_time))
 
+    costmap_filter_node_sim = Node(package='nav2_map_server', executable='costmap_filter_info_server',
+                               name='costmap_filter_info_server', output='screen', emulate_tty=True,
+                               parameters=[filters_yaml_sim], condition=IfCondition(use_sim_time))
+    costmap_filter_node_real = Node(package='nav2_map_server', executable='costmap_filter_info_server',
+                               name='costmap_filter_info_server', output='screen', emulate_tty=True,
+                               parameters=[filters_yaml_real], condition=UnlessCondition(use_sim_time))
+
+    server_filter_node_sim = Node(package='nav2_map_server', executable='map_server', name='filter_mask_server',
+                                            output='screen',
+                                            emulate_tty=True,
+                                            parameters=[filters_yaml_sim], condition=IfCondition(use_sim_time))
+    server_filter_node_real = Node(package='nav2_map_server', executable='map_server', name='filter_mask_server',
+                                            output='screen',
+                                            emulate_tty=True,
+                                            parameters=[filters_yaml_real], condition=UnlessCondition(use_sim_time))
+    
+
     lifecycle_node = Node(package="nav2_lifecycle_manager", executable="lifecycle_manager", 
                           name="lifecycle_manager_localization", output="screen",
                           parameters=[{"use_sim_time": use_sim_time}, {"autostart": True},
-                                      {"node_names": ["map_server", "amcl"]}])
-
+                                      {"node_names": ["map_server", "amcl", "filter_mask_server", "costmap_filter_info_server"]}])
 
     return LaunchDescription(
         [declare_use_sim_time,
          map_sim_node, map_real_node,
          amcl_sim_node, amcl_real_node,
-         lifecycle_node
+         lifecycle_node, costmap_filter_node_sim,
+         costmap_filter_node_real, server_filter_node_sim,
+         server_filter_node_real
         ]
     )

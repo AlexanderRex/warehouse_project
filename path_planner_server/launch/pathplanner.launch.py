@@ -63,6 +63,7 @@ def generate_launch_description():
                                         'controller_server',
                                         'recoveries_server',
                                         'bt_navigator']}])
+
     rviz_node = Node(
             package='rviz2',
             executable='rviz2',
