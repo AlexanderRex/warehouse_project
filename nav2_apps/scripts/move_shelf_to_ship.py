@@ -1,57 +1,49 @@
 import rclpy
+from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from std_srvs.srv import Empty
 
-def autolocalize():
-    rclpy.init()
-    node = rclpy.create_node('autolocalize')
+class WareHouseManager(Node):
+    def __init__(self):
+        super().__init__('autolocalize')
+        self.publisher = self.create_publisher(Twist, '/robot/cmd_vel', 10)
+        # Ожидаем, что сервис станет доступен
+        self.cli = self.create_client(Empty, '/reinitialize_global_localization')
+        while not self.cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('/reinitialize_global_localization service not available, waiting again...')
 
-    # Perform auto localization
-    client = node.create_client(Empty, '/reinitialize_global_localization')
-    while not client.wait_for_service(timeout_sec=1.0):
-        node.get_logger().info('Service /reinitialize_global_localization not available, waiting...')
-    request = Empty.Request()
-    future = client.call_async(request)
-    rclpy.spin_until_future_complete(node, future)
-    if future.result() is not None:
-        node.get_logger().info('Auto localization completed successfully!')
-    else:
-        node.get_logger().info('Failed to perform auto localization')
+    def reinitialize_global_localization(self):
+        self.get_logger().info('Reinitializing global localization...')
+        req = Empty.Request()
+        self.cli.call_async(req)
 
-    # Control the robot to perform rotations for better localization
-    publisher = node.create_publisher(Twist, '/robot/cmd_vel', 10)
-    cmd = Twist()
-
-    def rotate_left(timer):
-        node.get_logger().info('Rotating left for 5 seconds...')
-        cmd.angular.z = 0.5  # Example angular speed
-        publisher.publish(cmd)
-        timer.cancel()
-
-    def rotate_right(timer):
-        node.get_logger().info('Rotating right for 10 seconds...')
-        cmd.angular.z = -0.5  # Example angular speed
-        publisher.publish(cmd)
-        timer.cancel()
-
-    def stop_rotation(timer):
-        node.get_logger().info('Stopping rotation...')
-        cmd.angular.z = 0
-        publisher.publish(cmd)
-
-    # Rotate left for 5 seconds
-    rotate_left_timer = node.create_timer(5, lambda: rotate_left(rotate_left_timer))
-
-    # Rotate right for 10 seconds
-    rotate_right_timer = node.create_timer(10, lambda: rotate_right(rotate_right_timer))
-
-    # Rotate left for 5 seconds
-    rotate_left_timer_2 = node.create_timer(5, lambda: rotate_left(rotate_left_timer_2))
-
-    rclpy.spin(node)
-
-    node.destroy_node()
-    rclpy.shutdown()
+    def rotate_robot(self, angular_speed, duration):
+        self.get_logger().info(f'Rotating robot with angular speed: {angular_speed} rad/s for {duration} seconds')
+        
+        twist = Twist()
+        twist.angular.z = angular_speed
+        self.publisher.publish(twist)
+        
+        self.create_timer(duration, lambda: self.publisher.publish(Twist()))
 
 if __name__ == '__main__':
-    autolocalize()
+    rclpy.init()
+    warehouse_manager = WareHouseManager()
+
+    try:
+        warehouse_manager.reinitialize_global_localization()
+        rclpy.spin_once(warehouse_manager, timeout_sec=1)  # Даем время на обработку запроса сервиса
+        
+        # Повороты как указано
+        warehouse_manager.rotate_robot(0.5, 10)  # Влево на 5 секунд
+        rclpy.spin_once(warehouse_manager, timeout_sec=5)
+        warehouse_manager.rotate_robot(-0.5, 15)  # Вправо на 10 секунд
+        rclpy.spin_once(warehouse_manager, timeout_sec=10)
+        warehouse_manager.rotate_robot(0.5, 10)  # Влево на 5 секунд
+        rclpy.spin_once(warehouse_manager, timeout_sec=5)
+        
+    except KeyboardInterrupt:
+        pass
+    finally:
+        warehouse_manager.destroy_node()
+        rclpy.shutdown()
