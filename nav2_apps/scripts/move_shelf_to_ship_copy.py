@@ -2,11 +2,13 @@ import rclpy
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, PointStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionClient
 import tf2_ros
+from tf2_geometry_msgs import PointStamped as TF2PointStamped
+from tf2_geometry_msgs import do_transform_point
 import math
 
 class LaserScanNode(Node):
@@ -45,22 +47,23 @@ class LaserScanNode(Node):
             x_center = (leg_positions[0][0] + leg_positions[1][0]) / 2.0
             y_center = (leg_positions[0][1] + leg_positions[1][1]) / 2.0
 
+            point_shelf_legs = PointStamped()
+            point_shelf_legs.header.frame_id = msg.header.frame_id
+            point_shelf_legs.header.stamp = msg.header.stamp
+            point_shelf_legs.point.x = x_center
+            point_shelf_legs.point.y = y_center
+            point_shelf_legs.point.z = 0.0
+
             try:
+                transform = self.tf_buffer.lookup_transform('map', msg.header.frame_id, msg.header.stamp)
+                transformed_point = do_transform_point(point_shelf_legs, transform)
 
-                transform = self.tf_buffer.lookup_transform('map', msg.header.frame_id, rclpy.time.Time())
-
-                transformed_x = x_center + transform.transform.translation.x
-                transformed_y = y_center + transform.transform.translation.y
-
-                self.x_transformed = transformed_x
-                self.y_transformed = -transformed_y
+                self.x_transformed = transformed_point.point.x
+                self.y_transformed = transformed_point.point.y
                 return True
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
                 self.get_logger().error('Failed to transform point: {}'.format(str(e)))
                 return False
-        return False
-
-
 
     def laser_scan_callback(self, msg):
         self.detect_and_publish_shelf_legs(msg)
@@ -101,21 +104,26 @@ def main(args=None):
     initial_position = {'x': 0.0, 'y': 0.0, 'z': 0.0, 'w': 1.0}
     preload_position = {'x': 4.7, 'y': 0.0, 'z': 0.0, 'w': 1.0}
     
-
     navigator_node.send_robot_to_goal(preload_position)
 
     while not navigator_node.isTaskComplete():
         while laser_node.x_transformed == 0.0 and laser_node.y_transformed == 0.0:
-            executor = MultiThreadedExecutor()
-            executor.add_node(laser_node)
-            executor.spin_once()
+            rclpy.spin_once(laser_node)
 
-    midlegs_position = {'x': laser_node.x_transformed, 'y': -laser_node.y_transformed, 'z': -0.7, 'w': -0.7}        
+    midlegs_position = {'x': laser_node.x_transformed, 'y': laser_node.y_transformed, 'z': -0.7, 'w': 0.7}        
+    under_shelf_position = {'x': laser_node.x_transformed, 'y': laser_node.y_transformed - 0.3, 'z': -0.7, 'w': 0.7} 
 
     result_preload = navigator_node.getResult()
 
     if result_preload == TaskResult.SUCCEEDED:
         navigator_node.send_robot_to_goal(midlegs_position)
+        while not navigator_node.isTaskComplete():
+            print("Moving to legs midpoint")
+
+        result_midpoint = navigator_node.getResult()
+        if result_midpoint == TaskResult.SUCCEEDED:
+           navigator_node.send_robot_to_goal(under_shelf_position)
+           
 
 
 if __name__ == '__main__':
