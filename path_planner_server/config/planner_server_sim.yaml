@@ -1,6 +1,6 @@
 planner_server:
   ros__parameters:
-    expected_planner_frequency: 10.0
+    expected_planner_frequency: 1.0
     use_sim_time: True
     planner_plugins: ["GridBased"]
     GridBased:
@@ -25,10 +25,6 @@ global_costmap:
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
-      inflation_layer:
-        plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.35
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
@@ -40,12 +36,15 @@ global_costmap:
           marking: True
           data_type: "LaserScan"
           raytrace_max_range: 3.0
-          raytrace_min_range: 0.0
+          raytrace_min_range: 0.605
           obstacle_max_range: 2.5
-          obstacle_min_range: 0.0
+          obstacle_min_range: 0.605
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.35
       keepout_filter:
         plugin: "nav2_costmap_2d::KeepoutFilter"
         enabled: True
         filter_info_topic: "/costmap_filter_info"
       always_send_full_costmap: True
-      

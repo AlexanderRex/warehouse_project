@@ -1,7 +1,7 @@
 controller_server:
   ros__parameters:
     use_sim_time: True
-    controller_frequency: 10.0
+    controller_frequency: 4.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
@@ -13,7 +13,7 @@ controller_server:
     # Progress checker parameters
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.5
+      required_movement_radius: 0.05
       movement_time_allowance: 10.0
     # Goal checker parameters
     general_goal_checker:
@@ -65,8 +65,8 @@ controller_server:
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 5.0
-      publish_frequency: 2.0
+      update_frequency: 4.0
+      publish_frequency: 4.0
       global_frame: robot_odom
       robot_base_frame: robot_base_footprint
       use_sim_time: True
@@ -98,9 +98,9 @@ local_costmap:
           marking: True
           data_type: "LaserScan"
           raytrace_max_range: 3.0
-          raytrace_min_range: 0.0
+          raytrace_min_range: 0.605
           obstacle_max_range: 2.5
-          obstacle_min_range: 0.0
+          obstacle_min_range: 0.605
       keepout_filter:
         plugin: "nav2_costmap_2d::KeepoutFilter"
         enabled: True
