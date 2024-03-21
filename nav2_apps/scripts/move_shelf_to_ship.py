@@ -146,10 +146,14 @@ def main(args=None):
     initial_position = {'x': 0.0, 'y': 0.0, 'z': 0.0, 'w': 1.0}
     preload_position = {'x': 4.7, 'y': 0.0, 'z': 0.0, 'w': 1.0}
     after_load_position = {'x': 5.4, 'y': 0.0, 'z': 1.0, 'w': 0.0}
+    preload_position_real = {'x': 4.7, 'y': 0.0, 'z': 0.0, 'w': 1.0}
+    after_load_position_real = {'x': 5.4, 'y': 0.0, 'z': 1.0, 'w': 0.0}
     unload_position = {'x': 2.53, 'y': 1.0, 'z': -0.7, 'w': 0.7}
+    after_load_position_real = {'x': 5.4, 'y': 0.0, 'z': 1.0, 'w': 0.0}
+    unload_position_real = {'x': 2.53, 'y': 1.0, 'z': -0.7, 'w': 0.7}
     after_unload_position = {'x': 2.53, 'y': 0.0, 'z': 1.0, 'w': 0.0}
 
-    navigator_node.set_initial_pose(initial_position)
+    #navigator_node.set_initial_pose(initial_position)
     navigator_node.waitUntilNav2Active()
     navigator_node.send_robot_to_goal(preload_position)
 
