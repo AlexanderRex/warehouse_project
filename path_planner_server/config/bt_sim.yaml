@@ -3,7 +3,7 @@ bt_navigator:
     use_sim_time: True
     global_frame: map
     robot_base_frame: robot_base_footprint
-    odom_topic: /robot_odom
+    odom_topic: /odom
     bt_loop_duration: 10
     default_server_timeout: 20
     default_nav_to_pose_bt_xml: "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/navigate_w_replanning_and_recovery.xml"

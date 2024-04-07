@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Empty
+from std_msgs.msg import String
 from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import PoseStamped, PointStamped, Polygon, Point32
@@ -99,22 +99,24 @@ class ShelfLiftController(Node):
     def __init__(self):
         super().__init__('shelf_lift_controller')
 
-        self.elevator_up_publisher = self.create_publisher(Empty, '/elevator_up', 10)
-        self.elevator_down_publisher = self.create_publisher(Empty, '/elevator_down', 10)
+        self.elevator_up_publisher = self.create_publisher(String, '/elevator_up', 10)
+        self.elevator_down_publisher = self.create_publisher(String, '/elevator_down', 10)
 
         self.global_footprint_publisher = self.create_publisher(Polygon, '/global_costmap/footprint', 10)
         self.local_footprint_publisher = self.create_publisher(Polygon, '/local_costmap/footprint', 10)
 
     def lift_shelf_up(self):
 
-        up_msg = Empty()
+        up_msg = String()
+        up_msg.data = ''
         self.elevator_up_publisher.publish(up_msg)
         self.get_logger().info('Sent signal to lift shelf up.')
         self.change_footprint(0.3)
 
     def lower_shelf_down(self):
 
-        down_msg = Empty()
+        down_msg = String()
+        down_msg.data = ''
         self.elevator_down_publisher.publish(down_msg)
         self.get_logger().info('Sent signal to lower shelf down.')
         self.change_footprint(0.15)

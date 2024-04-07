@@ -28,6 +28,7 @@ global_costmap:
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
+        footprint_clearing_enabled: True
         observation_sources: scan
         scan:
           topic: /scan

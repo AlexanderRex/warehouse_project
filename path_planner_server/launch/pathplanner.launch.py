@@ -30,10 +30,10 @@ def generate_launch_description():
     recovery_yaml_sim = get_file_path("path_planner_server", "config", "recovery_sim.yaml")
 
     nav2_con_node_sim = Node(package='nav2_controller', executable='controller_server', name='controller_server',
-            output='screen', parameters=[controller_yaml_sim], remappings=[('/cmd_vel', '/robot/cmd_vel')],
+            output='screen', parameters=[controller_yaml_sim], remappings=[('/cmd_vel', '/diffbot_base_controller/cmd_vel_unstamped')],
             condition=IfCondition(use_sim_time))
     nav2_con_node_real = Node(package='nav2_controller', executable='controller_server', name='controller_server',
-            output='screen', parameters=[controller_yaml_real], remappings=[('/cmd_vel', '/robot/cmd_vel')],
+            output='screen', parameters=[controller_yaml_real], remappings=[('/cmd_vel', '/diffbot_base_controller/cmd_vel_unstamped')],
             condition=UnlessCondition(use_sim_time))
 
     nav2_plan_node_sim = Node(package='nav2_planner', executable='planner_server', name='planner_server',
@@ -43,10 +43,10 @@ def generate_launch_description():
             output='screen', parameters=[planner_yaml_real],
             condition=UnlessCondition(use_sim_time))
 
-    nav2_rec_sim = Node(package='nav2_recoveries', executable='recoveries_server', name='recoveries_server',
+    nav2_rec_sim = Node(package='nav2_behaviors', executable='behavior_server', name='recoveries_server',
             parameters=[recovery_yaml_sim], output='screen',
             condition=IfCondition(use_sim_time))
-    nav2_rec_real = Node(package='nav2_recoveries', executable='recoveries_server', name='recoveries_server',
+    nav2_rec_real = Node(package='nav2_behaviors', executable='behavior_server', name='recoveries_server',
             parameters=[recovery_yaml_real], output='screen',
             condition=UnlessCondition(use_sim_time))
 
