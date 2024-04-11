@@ -26,47 +26,17 @@ class LaserScanNode(Node):
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
-    def detect_and_publish_shelf_legs(self, msg):
-        leg_positions = []
-        is_currently_high_intensity = False
-        current_angle = msg.angle_min
-
-        for i, intensity in enumerate(msg.intensities):
-            if intensity >= self.intensity_threshold:
-                if not is_currently_high_intensity:
-                    x = msg.ranges[i] * math.cos(current_angle)
-                    y = msg.ranges[i] * math.sin(current_angle)
-                    leg_positions.append((x, y))
-                    is_currently_high_intensity = True
-            else:
-                is_currently_high_intensity = False
-            current_angle += msg.angle_increment
-
-        if len(leg_positions) == 2:
-            x_center = (leg_positions[0][0] + leg_positions[1][0]) / 2.0
-            y_center = (leg_positions[0][1] + leg_positions[1][1]) / 2.0
-
-            point_shelf_legs = PointStamped()
-            point_shelf_legs.header.frame_id = msg.header.frame_id
-            point_shelf_legs.header.stamp = msg.header.stamp
-            point_shelf_legs.point.x = x_center
-            point_shelf_legs.point.y = y_center
-            point_shelf_legs.point.z = 0.0
-
-            try:
-                transform = self.tf_buffer.lookup_transform('map', msg.header.frame_id, msg.header.stamp)
-                transformed_point = do_transform_point(point_shelf_legs, transform)
-
-                self.x_transformed = transformed_point.point.x
-                self.y_transformed = transformed_point.point.y
-                return True
-            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
-                self.get_logger().error('Failed to transform point: {}'.format(str(e)))
-                return False
-
     def laser_scan_callback(self, msg):
-        self.detect_and_publish_shelf_legs(msg)
-        print(self.x_transformed, self.y_transformed)
+
+        try:
+            transform = self.tf_buffer.lookup_transform('map', 'robot_cart_laser', rclpy.time.Time())
+            self.x_transformed = transform.transform.translation.x
+            self.y_transformed = transform.transform.translation.y
+
+            self.get_logger().info(f'Transformed coordinates: x={self.x_transformed}, y={self.y_transformed}')
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+            self.get_logger().error('Failed to transform robot_cart_laser to map: {}'.format(str(e)))
+
 
 class NavigatorNode(BasicNavigator):
     def __init__(self):
@@ -181,29 +151,29 @@ def main(args=None):
                 print("Moving to under shelf position")
             under_shelf_result = navigator_node.getResult()
 
-            if under_shelf_result == TaskResult.SUCCEEDED:
-                lift_controller.lift_shelf_up()
-                navigator_node.send_robot_to_goal(after_load_position)
-                while not navigator_node.isTaskComplete():
-                    print("Moving to after load position")
-                after_load_result = navigator_node.getResult()
+            # if under_shelf_result == TaskResult.SUCCEEDED:
+            #     lift_controller.lift_shelf_up()
+            #     navigator_node.send_robot_to_goal(after_load_position)
+            #     while not navigator_node.isTaskComplete():
+            #         print("Moving to after load position")
+            #     after_load_result = navigator_node.getResult()
 
-                if after_load_result == TaskResult.SUCCEEDED:
-                    # Perform actions after reaching the after load position
-                    print("Reached after load position successfully")
-                    navigator_node.send_robot_to_goal(unload_position)
-                    while not navigator_node.isTaskComplete():
-                        print("Moving to unload position")
-                    unload_result = navigator_node.getResult()
+            #     if after_load_result == TaskResult.SUCCEEDED:
+            #         # Perform actions after reaching the after load position
+            #         print("Reached after load position successfully")
+            #         navigator_node.send_robot_to_goal(unload_position)
+            #         while not navigator_node.isTaskComplete():
+            #             print("Moving to unload position")
+            #         unload_result = navigator_node.getResult()
 
-                    if unload_result == TaskResult.SUCCEEDED:
-                        lift_controller.lower_shelf_down()
-                        navigator_node.send_robot_to_goal(after_unload_position)
-                        while not navigator_node.isTaskComplete():
-                            print("Moving to unload position")
-                        after_unload_result = navigator_node.getResult()
-                        if after_unload_result == TaskResult.SUCCEEDED:
-                            navigator_node.send_robot_to_goal(initial_position)
+            #         if unload_result == TaskResult.SUCCEEDED:
+            #             lift_controller.lower_shelf_down()
+            #             navigator_node.send_robot_to_goal(after_unload_position)
+            #             while not navigator_node.isTaskComplete():
+            #                 print("Moving to unload position")
+            #             after_unload_result = navigator_node.getResult()
+            #             if after_unload_result == TaskResult.SUCCEEDED:
+            #                 navigator_node.send_robot_to_goal(initial_position)
            
 if __name__ == '__main__':
     main()
