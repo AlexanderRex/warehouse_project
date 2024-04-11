@@ -19,7 +19,7 @@ class LaserScanNode(Node):
             self.laser_scan_callback,
             10)
 
-        self.intensity_threshold = 6000.0
+        self.intensity_threshold = 7000.0
         self.x_transformed = 0.0
         self.y_transformed = 0.0
 
@@ -145,11 +145,11 @@ def main(args=None):
 
     increase_modulus_by = 0.45 #to move it right under shelf
     
-    initial_position = {'x': 0.0, 'y': 0.0, 'z': 0.0, 'w': 1.0}
-    preload_position = {'x': 4.7, 'y': 0.0, 'z': 0.0, 'w': 1.0}
-    after_load_position = {'x': 5.4, 'y': 0.0, 'z': 1.0, 'w': 0.0}
-    unload_position = {'x': 2.53, 'y': 1.0, 'z': -0.7, 'w': 0.7}
-    after_unload_position = {'x': 2.53, 'y': 0.0, 'z': 1.0, 'w': 0.0}
+    initial_position = {'x': -3.18, 'y': 0.0, 'z': 0.0, 'w': 1.0}
+    preload_position = {'x': -2.97, 'y': 3.65, 'z': 0.0, 'w': 1.0}
+    after_load_position = {'x': -2.84, 'y': 4.29, 'z': 1.0, 'w': 0.0}
+    unload_position = {'x': -4.27, 'y': 1.83, 'z': -0.7, 'w': 0.7}
+    after_unload_position = {'x': -3.13, 'y': 1.97, 'z': 1.0, 'w': 0.0}
 
     #navigator_node.set_initial_pose(initial_position)
     navigator_node.waitUntilNav2Active()

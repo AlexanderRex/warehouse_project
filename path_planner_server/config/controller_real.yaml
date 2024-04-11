@@ -6,12 +6,13 @@ controller_server:
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
     failure_tolerance: 0.3
-    progress_checker_plugin: "progress_checker"
+    progress_checker_plugins: ["progress_checker"]
     goal_checker_plugins: ["general_goal_checker"] 
     controller_plugins: ["FollowPath"]
 
     # Progress checker parameters
     progress_checker:
+      stateful: True
       plugin: "nav2_controller::SimpleProgressChecker"
       required_movement_radius: 0.05
       movement_time_allowance: 10.0
@@ -67,9 +68,9 @@ local_costmap:
     ros__parameters:
       update_frequency: 4.0
       publish_frequency: 4.0
-      global_frame: odom
+      global_frame: robot_odom
       robot_base_frame: robot_base_footprint
-      use_sim_time: False
+      use_sim_time: false
       rolling_window: true
       width: 1
       height: 1
@@ -83,6 +84,7 @@ local_costmap:
         inflation_radius: 0.35
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
+        footprint_clearing_enabled: true
         enabled: True
         publish_voxel_map: True
         origin_z: 0.0

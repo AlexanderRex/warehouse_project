@@ -20,7 +20,7 @@ amcl:
     max_beams: 360
     max_particles: 2500
     min_particles: 250
-    odom_frame_id: "odom"
+    odom_frame_id: "robot_odom"
     pf_err: 0.05
     pf_z: 0.99
     recovery_alpha_fast: 0.0

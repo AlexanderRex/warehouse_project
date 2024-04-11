@@ -33,7 +33,7 @@ def generate_launch_description():
             output='screen', parameters=[controller_yaml_sim], remappings=[('/cmd_vel', '/diffbot_base_controller/cmd_vel_unstamped')],
             condition=IfCondition(use_sim_time))
     nav2_con_node_real = Node(package='nav2_controller', executable='controller_server', name='controller_server',
-            output='screen', parameters=[controller_yaml_real], remappings=[('/cmd_vel', '/diffbot_base_controller/cmd_vel_unstamped')],
+            output='screen', parameters=[controller_yaml_real],
             condition=UnlessCondition(use_sim_time))
 
     nav2_plan_node_sim = Node(package='nav2_planner', executable='planner_server', name='planner_server',
