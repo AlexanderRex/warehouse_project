@@ -111,7 +111,7 @@ class ShelfLiftController(Node):
         up_msg.data = ''
         self.elevator_up_publisher.publish(up_msg)
         self.get_logger().info('Sent signal to lift shelf up.')
-        self.change_footprint(0.3)
+        self.change_footprint(0.5)
 
     def lower_shelf_down(self):
 
@@ -119,7 +119,7 @@ class ShelfLiftController(Node):
         down_msg.data = ''
         self.elevator_down_publisher.publish(down_msg)
         self.get_logger().info('Sent signal to lower shelf down.')
-        self.change_footprint(0.15)
+        self.change_footprint(0.2)
 
     def change_footprint(self, radius):
         # Create a circular footprint with the specified radius
@@ -151,7 +151,7 @@ def main(args=None):
     unload_position = {'x': 2.53, 'y': 1.0, 'z': -0.7, 'w': 0.7}
     after_unload_position = {'x': 2.53, 'y': 0.0, 'z': 1.0, 'w': 0.0}
 
-    #navigator_node.set_initial_pose(initial_position)
+    navigator_node.set_initial_pose(initial_position)
     navigator_node.waitUntilNav2Active()
     navigator_node.send_robot_to_goal(preload_position)
 

@@ -75,13 +75,13 @@ local_costmap:
       width: 1
       height: 1
       resolution: 0.05
-      robot_radius: 0.15
+      robot_radius: 0.2
       plugins: ["voxel_layer", "inflation_layer"]
       filters: ["keepout_filter"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.35
+        cost_scaling_factor: 5.0
+        inflation_radius: 0.15
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         footprint_clearing_enabled: true

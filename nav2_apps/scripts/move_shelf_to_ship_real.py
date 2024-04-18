@@ -3,12 +3,16 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import PoseStamped, PointStamped, Polygon, Point32
+from geometry_msgs.msg import PoseStamped, PointStamped, Polygon, Point32, Twist
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 import tf2_ros
 from tf2_geometry_msgs import PointStamped as TF2PointStamped
 from tf2_geometry_msgs import do_transform_point
+from nav_msgs.msg import Odometry
+from math import radians
+from rclpy.duration import Duration
 import math
+
 
 class LaserScanNode(Node):
     def __init__(self):
@@ -41,6 +45,8 @@ class LaserScanNode(Node):
 class NavigatorNode(BasicNavigator):
     def __init__(self):
         super().__init__()
+        # self.vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        # self.is_moved_forward = False
 
     def set_initial_pose(self, initial_position):
         initial_pose_msg = PoseStamped()
@@ -50,7 +56,6 @@ class NavigatorNode(BasicNavigator):
         initial_pose_msg.pose.position.y = initial_position['y']
         initial_pose_msg.pose.orientation.z = initial_position['z']
         initial_pose_msg.pose.orientation.w = initial_position['w']
-        
         self.setInitialPose(initial_pose_msg)
 
     def send_robot_to_goal(self, goal_position):
@@ -61,9 +66,32 @@ class NavigatorNode(BasicNavigator):
         goal_pose_msg.pose.position.y = goal_position['y']
         goal_pose_msg.pose.orientation.z = goal_position['z']
         goal_pose_msg.pose.orientation.w = goal_position['w']
-        
         self.get_logger().info(f'Sending robot to ({goal_position["x"]}, {goal_position["y"]})')
         self.goToPose(goal_pose_msg)
+
+    # def move_forward(self, distance):
+
+    #     duration = 5
+    #     speed = distance / duration if duration != 0 else 0
+    #     msg = Twist()
+    #     msg.linear.x = speed
+    #     msg.angular.z = 0.0
+
+    #     end_time = self.get_clock().now().seconds_nanoseconds()[0] + duration
+        
+    #     def timer_callback():
+    #         current_time = self.get_clock().now().seconds_nanoseconds()[0]
+    #         if current_time < end_time:
+    #             self.vel_pub.publish(msg)
+    #             self.get_logger().info(f'Moving forward at {speed} m/s')
+    #         else:
+    #             msg.linear.x = 0.0
+    #             self.vel_pub.publish(msg)
+    #             timer.cancel()
+    #             self.get_logger().info('Stop moving, target duration reached.')
+    #             self.is_moved_forward = True
+
+    #     timer = self.create_timer(0.1, timer_callback)
 
 class ShelfLiftController(Node):
     def __init__(self):
@@ -110,18 +138,18 @@ def main(args=None):
     rclpy.init(args=args)
 
     navigator_node = NavigatorNode()
+
     laser_node = LaserScanNode()
     lift_controller = ShelfLiftController()
+    increase_modulus_by = 0.5
 
-    increase_modulus_by = 0.45 #to move it right under shelf
-    
-    initial_position = {'x': -3.18, 'y': 0.0, 'z': 0.0, 'w': 1.0}
+    initial_position = {'x': -3.0, 'y': 0.0, 'z': 0.7, 'w': 0.7}
     preload_position = {'x': -2.97, 'y': 3.65, 'z': 0.0, 'w': 1.0}
     after_load_position = {'x': -2.84, 'y': 4.29, 'z': 1.0, 'w': 0.0}
-    unload_position = {'x': -4.27, 'y': 1.83, 'z': -0.7, 'w': 0.7}
-    after_unload_position = {'x': -3.13, 'y': 1.97, 'z': 1.0, 'w': 0.0}
+    unload_position = {'x': -4.27, 'y': 1.83, 'z': 0.0, 'w': 1.0}
+    after_unload_position = {'x': -3.13, 'y': 1.97, 'z': 0.0, 'w': 1.0}
 
-    #navigator_node.set_initial_pose(initial_position)
+    navigator_node.set_initial_pose(initial_position)
     navigator_node.waitUntilNav2Active()
     navigator_node.send_robot_to_goal(preload_position)
 
@@ -129,12 +157,13 @@ def main(args=None):
         while laser_node.x_transformed == 0.0 and laser_node.y_transformed == 0.0:
             rclpy.spin_once(laser_node)
 
-    midlegs_position = {'x': laser_node.x_transformed, 'y': laser_node.y_transformed, 'z': -0.7, 'w': 0.7}        
+    midlegs_position = {'x': laser_node.x_transformed, 'y': laser_node.y_transformed, 'z': 0.0, 'w': 1.0}  
+          
     under_shelf_position = {
-        'x': laser_node.x_transformed,
-        'y': (abs(laser_node.y_transformed) + increase_modulus_by) * (-1 if laser_node.y_transformed < 0 else 1),
-        'z': 0.7,
-        'w': 0.7
+        'x': laser_node.x_transformed + increase_modulus_by,
+        'y': laser_node.y_transformed,
+        'z': -1.0,
+        'w': 0.0
     } 
 
     result_preload = navigator_node.getResult()
@@ -142,38 +171,37 @@ def main(args=None):
     if result_preload == TaskResult.SUCCEEDED:
         navigator_node.send_robot_to_goal(midlegs_position)
         while not navigator_node.isTaskComplete():
-            print("Moving to legs midpoint")
+            print("Midleg point: ",midlegs_position)
         result_midpoint = navigator_node.getResult()
 
         if result_midpoint == TaskResult.SUCCEEDED:
             navigator_node.send_robot_to_goal(under_shelf_position)
             while not navigator_node.isTaskComplete():
-                print("Moving to under shelf position")
+                print("Undershelf point: ", under_shelf_position)
             under_shelf_result = navigator_node.getResult()
 
-            # if under_shelf_result == TaskResult.SUCCEEDED:
-            #     lift_controller.lift_shelf_up()
-            #     navigator_node.send_robot_to_goal(after_load_position)
-            #     while not navigator_node.isTaskComplete():
-            #         print("Moving to after load position")
-            #     after_load_result = navigator_node.getResult()
+            if under_shelf_result == TaskResult.SUCCEEDED:
+                navigator_node.send_robot_to_goal(after_load_position)
+                while not navigator_node.isTaskComplete():
+                    print("Moving to after load position")
+                after_load_result = navigator_node.getResult()
 
-            #     if after_load_result == TaskResult.SUCCEEDED:
-            #         # Perform actions after reaching the after load position
-            #         print("Reached after load position successfully")
-            #         navigator_node.send_robot_to_goal(unload_position)
-            #         while not navigator_node.isTaskComplete():
-            #             print("Moving to unload position")
-            #         unload_result = navigator_node.getResult()
+                if after_load_result == TaskResult.SUCCEEDED:
+                    # Perform actions after reaching the after load position
+                    print("Reached after load position successfully")
+                    navigator_node.send_robot_to_goal(unload_position)
+                    while not navigator_node.isTaskComplete():
+                        print("Moving to unload position")
+                    unload_result = navigator_node.getResult()
 
-            #         if unload_result == TaskResult.SUCCEEDED:
-            #             lift_controller.lower_shelf_down()
-            #             navigator_node.send_robot_to_goal(after_unload_position)
-            #             while not navigator_node.isTaskComplete():
-            #                 print("Moving to unload position")
-            #             after_unload_result = navigator_node.getResult()
-            #             if after_unload_result == TaskResult.SUCCEEDED:
-            #                 navigator_node.send_robot_to_goal(initial_position)
-           
+                    if unload_result == TaskResult.SUCCEEDED:
+                        #lift_controller.lower_shelf_down()
+                        navigator_node.send_robot_to_goal(after_unload_position)
+                        while not navigator_node.isTaskComplete():
+                            print("Moving to unload position")
+                        after_unload_result = navigator_node.getResult()
+                        if after_unload_result == TaskResult.SUCCEEDED:
+                            navigator_node.send_robot_to_goal(initial_position)
+                
 if __name__ == '__main__':
     main()
