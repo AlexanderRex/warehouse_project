@@ -3,12 +3,52 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import PoseStamped, PointStamped, Polygon, Point32
+from geometry_msgs.msg import PoseStamped, PointStamped, Polygon, Point32, Twist
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 import tf2_ros
 from tf2_geometry_msgs import PointStamped as TF2PointStamped
 from tf2_geometry_msgs import do_transform_point
 import math
+from std_srvs.srv import Empty
+
+class AutoLocalizer(Node):
+    def __init__(self):
+        super().__init__('auto_localizer')
+        self.publisher = self.create_publisher(Twist, '/diffbot_base_controller/cmd_vel_unstamped', 10)
+        self.cli = self.create_client(Empty, '/reinitialize_global_localization')
+        self.initialized = False 
+
+    def start_localization(self):
+        """Initiate the localization process."""
+
+        if not self.cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Reinitialize global localization service not available, waiting...')
+            return
+        
+        self.get_logger().info('Reinitializing global localization...')
+        
+        self.cli.call_async(Empty.Request()).add_done_callback(self.perform_rotation_sequence)
+
+    def perform_rotation_sequence(self, response):
+        """Perform the actual rotation sequence for localization."""
+        directions = [0.5, -0.5, 0.5] 
+        durations = [5, 10, 5] 
+        for speed, duration in zip(directions, durations):
+            self.rotate_robot(speed, duration)
+        
+        self.initialized = True
+        self.get_logger().info('Localization process completed.')
+
+    def rotate_robot(self, angular_speed, duration):
+        """Rotate the robot at the specified angular speed for the specified duration."""
+        twist = Twist()
+        twist.angular.z = angular_speed
+        self.publisher.publish(twist)
+
+        rclpy.spin_once(self, timeout_sec=duration)
+        twist.angular.z = 0.0
+        self.publisher.publish(twist)
+
 
 class LaserScanNode(Node):
     def __init__(self):
@@ -137,11 +177,14 @@ class ShelfLiftController(Node):
         self.get_logger().info(f'Changed robot footprint to radius: {radius} meters.')
 
 def main(args=None):
+
     rclpy.init(args=args)
 
-    navigator_node = NavigatorNode()
+    
     laser_node = LaserScanNode()
     lift_controller = ShelfLiftController()
+    navigator_node = NavigatorNode()
+    navigator_node.waitUntilNav2Active()
 
     increase_modulus_by = 0.45 #to move it right under shelf
     
