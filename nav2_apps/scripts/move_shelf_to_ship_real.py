@@ -141,7 +141,7 @@ def main(args=None):
 
     laser_node = LaserScanNode()
     lift_controller = ShelfLiftController()
-    increase_modulus_by = 0.5
+    increase_modulus_by = 0.65
 
     initial_position = {'x': -3.0, 'y': 0.0, 'z': 0.7, 'w': 0.7}
     preload_position = {'x': -2.97, 'y': 3.65, 'z': 0.0, 'w': 1.0}
@@ -181,6 +181,7 @@ def main(args=None):
             under_shelf_result = navigator_node.getResult()
 
             if under_shelf_result == TaskResult.SUCCEEDED:
+                #lift_controller.lift_shelf_up()
                 navigator_node.send_robot_to_goal(after_load_position)
                 while not navigator_node.isTaskComplete():
                     print("Moving to after load position")
