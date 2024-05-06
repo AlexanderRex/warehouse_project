@@ -12,6 +12,7 @@ from nav_msgs.msg import Odometry
 from math import radians
 from rclpy.duration import Duration
 import math
+import time
 
 
 class LaserScanNode(Node):
@@ -69,30 +70,6 @@ class NavigatorNode(BasicNavigator):
         self.get_logger().info(f'Sending robot to ({goal_position["x"]}, {goal_position["y"]})')
         self.goToPose(goal_pose_msg)
 
-    # def move_forward(self, distance):
-
-    #     duration = 5
-    #     speed = distance / duration if duration != 0 else 0
-    #     msg = Twist()
-    #     msg.linear.x = speed
-    #     msg.angular.z = 0.0
-
-    #     end_time = self.get_clock().now().seconds_nanoseconds()[0] + duration
-        
-    #     def timer_callback():
-    #         current_time = self.get_clock().now().seconds_nanoseconds()[0]
-    #         if current_time < end_time:
-    #             self.vel_pub.publish(msg)
-    #             self.get_logger().info(f'Moving forward at {speed} m/s')
-    #         else:
-    #             msg.linear.x = 0.0
-    #             self.vel_pub.publish(msg)
-    #             timer.cancel()
-    #             self.get_logger().info('Stop moving, target duration reached.')
-    #             self.is_moved_forward = True
-
-    #     timer = self.create_timer(0.1, timer_callback)
-
 class ShelfLiftController(Node):
     def __init__(self):
         super().__init__('shelf_lift_controller')
@@ -102,22 +79,28 @@ class ShelfLiftController(Node):
 
         self.global_footprint_publisher = self.create_publisher(Polygon, '/global_costmap/footprint', 10)
         self.local_footprint_publisher = self.create_publisher(Polygon, '/local_costmap/footprint', 10)
+        self.up_message_sent = False
+        self.down_message_sent = False
 
     def lift_shelf_up(self):
 
-        up_msg = String()
-        up_msg.data = ''
-        self.elevator_up_publisher.publish(up_msg)
-        self.get_logger().info('Sent signal to lift shelf up.')
-        self.change_footprint(0.3)
+        if not self.up_message_sent:
+            up_msg = String()
+            up_msg.data = ''
+            self.elevator_up_publisher.publish(up_msg)
+            self.get_logger().info('Sent signal to lift shelf up.')
+            self.change_footprint(0.3)
+            self.up_message_sent = True
 
     def lower_shelf_down(self):
 
-        down_msg = String()
-        down_msg.data = ''
-        self.elevator_down_publisher.publish(down_msg)
-        self.get_logger().info('Sent signal to lower shelf down.')
-        self.change_footprint(0.15)
+        if not self.down_message_sent:
+            down_msg = String()
+            down_msg.data = ''
+            self.elevator_down_publisher.publish(down_msg)
+            self.get_logger().info('Sent signal to lower shelf down.')
+            self.change_footprint(0.15)
+            self.down_message_sent = False
 
     def change_footprint(self, radius):
         # Create a circular footprint with the specified radius
@@ -135,19 +118,20 @@ class ShelfLiftController(Node):
         self.get_logger().info(f'Changed robot footprint to radius: {radius} meters.')
 
 def main(args=None):
+
     rclpy.init(args=args)
 
     navigator_node = NavigatorNode()
 
     laser_node = LaserScanNode()
     lift_controller = ShelfLiftController()
-    increase_modulus_by = 0.65
+    increase_modulus_by = 0.7
 
     initial_position = {'x': -3.0, 'y': 0.0, 'z': 0.7, 'w': 0.7}
-    preload_position = {'x': -2.97, 'y': 3.65, 'z': 0.0, 'w': 1.0}
+    preload_position = {'x': -2.97, 'y': 3.75, 'z': 0.0, 'w': 1.0}
     after_load_position = {'x': -2.84, 'y': 4.29, 'z': 1.0, 'w': 0.0}
-    unload_position = {'x': -4.27, 'y': 1.83, 'z': 0.0, 'w': 1.0}
-    after_unload_position = {'x': -3.13, 'y': 1.97, 'z': 0.0, 'w': 1.0}
+    unload_position = {'x': -4.45, 'y': 2.00, 'z': 0.0, 'w': 1.0}
+    after_unload_position = {'x': -3.13, 'y': 2.00, 'z': 0.0, 'w': 1.0}
 
     navigator_node.set_initial_pose(initial_position)
     navigator_node.waitUntilNav2Active()
@@ -181,7 +165,8 @@ def main(args=None):
             under_shelf_result = navigator_node.getResult()
 
             if under_shelf_result == TaskResult.SUCCEEDED:
-                #lift_controller.lift_shelf_up()
+                lift_controller.lift_shelf_up()
+                time.sleep(1)
                 navigator_node.send_robot_to_goal(after_load_position)
                 while not navigator_node.isTaskComplete():
                     print("Moving to after load position")
@@ -196,7 +181,8 @@ def main(args=None):
                     unload_result = navigator_node.getResult()
 
                     if unload_result == TaskResult.SUCCEEDED:
-                        #lift_controller.lower_shelf_down()
+                        lift_controller.lower_shelf_down()
+                        time.sleep(1)
                         navigator_node.send_robot_to_goal(after_unload_position)
                         while not navigator_node.isTaskComplete():
                             print("Moving to unload position")
